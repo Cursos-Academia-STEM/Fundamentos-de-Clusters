@@ -1,0 +1,11 @@
+nodo,grupo,puerto_switch,led_encendido,led_poe,observaciones
+pi-a-master,A,1,,,
+pi-a-01,A,2,,,
+pi-a-02,A,3,,,
+pi-a-03,A,4,,,
+pi-b-master,B,5,,,
+pi-b-01,B,6,,,
+pi-b-02,B,7,,,
+pi-b-03,B,8,,,
+nas,-,,,,
+router (enlace ascendente),-,,,,

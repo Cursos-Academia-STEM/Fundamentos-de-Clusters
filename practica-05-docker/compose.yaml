@@ -1,0 +1,28 @@
+# Práctica 5 — WordPress con MariaDB en Docker Compose (sección 2.5.7)
+# Uso (en un nodo):  docker compose up -d   ->  http://<IP-del-nodo>:8080
+# Contraseñas solo para el laboratorio.
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: raiz123
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: wp
+      MARIADB_PASSWORD: wp123
+    volumes:
+      - datos_db:/var/lib/mysql      # sin este volumen, los datos se pierden con "down"
+  web:
+    image: wordpress:latest
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "8080:80"                    # puerto del nodo : puerto del contenedor
+    environment:
+      WORDPRESS_DB_HOST: db          # nombre del servicio = nombre en la red interna
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: wp123
+      WORDPRESS_DB_NAME: wordpress
+volumes:
+  datos_db:

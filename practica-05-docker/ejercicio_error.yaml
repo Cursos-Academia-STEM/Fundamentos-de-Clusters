@@ -1,0 +1,7 @@
+# Analiza el error (Módulo 5): este archivo falla con "docker compose config".
+# Encuentra y corrige la línea mal sangrada.
+services:
+  web:
+    image: nginx
+     ports:
+      - "8080:80"

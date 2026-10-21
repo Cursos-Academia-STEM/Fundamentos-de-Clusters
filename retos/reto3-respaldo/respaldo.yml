@@ -1,0 +1,41 @@
+# Reto 3 — Respaldo automático de la base de datos del proyecto hacia el NAS.
+# Se combina con el stack del proyecto para compartir su red interna (el host "db"):
+#
+#   mkdir -p /mnt/cluster-data/grupo-a/respaldos
+#   GRUPO=grupo-a docker stack deploy -c ../../practica-08-proyecto/stack.yml -c respaldo.yml sitio
+#
+# Genera un respaldo cada INTERVALO segundos y conserva los últimos CONSERVAR.
+services:
+  respaldo:
+    image: mariadb:11
+    environment:
+      MYSQL_PWD: raiz123
+      INTERVALO: "86400"
+      CONSERVAR: "7"
+    entrypoint:
+      - bash
+      - -c
+      - |
+        sleep 60
+        while true; do
+          f=/respaldos/wordpress_$$(date +%Y%m%d_%H%M%S).sql.gz
+          if mariadb-dump -h db -u root --single-transaction wordpress | gzip > "$$f"; then
+            echo "Respaldo creado: $$f"
+          else
+            echo "Fallo el respaldo"; rm -f "$$f"
+          fi
+          ls -1t /respaldos/*.sql.gz | tail -n +$$((CONSERVAR + 1)) | xargs -r rm -f
+          sleep "$$INTERVALO"
+        done
+    volumes:
+      - respaldos:/respaldos
+    deploy:
+      replicas: 1
+
+volumes:
+  respaldos:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=192.168.20.5,rw,nfsvers=4"
+      device: ":/volume1/cluster-data/${GRUPO:-grupo-a}/respaldos"

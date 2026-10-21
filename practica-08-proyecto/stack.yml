@@ -1,0 +1,63 @@
+# Proyecto integrador — WordPress + MariaDB en Docker Swarm con datos en el NAS (sección 2.8.2)
+#
+# Despliegue (en el maestro del grupo; GRUPO = grupo-a o grupo-b):
+#   GRUPO=grupo-a docker stack deploy -c stack.yml sitio
+# Después de instalar WordPress:
+#   docker service scale sitio_web=3
+#
+# Las subcarpetas db y wp deben existir antes en /mnt/cluster-data/<GRUPO>/ (preparar.sh las crea).
+# Contraseñas solo para el laboratorio.
+
+services:
+  # Base de datos: 1 sola réplica, porque MariaDB no admite varias copias escribiendo los mismos archivos.
+  # Su tolerancia a fallos viene del NAS: si su nodo cae, Swarm la reinicia en otro worker con los mismos datos.
+  db:
+    image: mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: raiz123
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: wp
+      MARIADB_PASSWORD: wp123
+    volumes:
+      - db_datos:/var/lib/mysql
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == worker      # el maestro queda libre para administrar
+      restart_policy:
+        condition: any
+
+  # Sitio web: se despliega con 1 réplica y se escala a 3 al terminar la instalación,
+  # para que varias réplicas no creen los archivos iniciales al mismo tiempo en el NAS.
+  web:
+    image: wordpress:latest
+    ports:
+      - "8080:80"                    # routing mesh: disponible en la IP de cualquier nodo del grupo
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: wp123
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - wp_datos:/var/www/html
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1               # actualiza una réplica a la vez, sin cortar el servicio
+        delay: 10s
+
+# Volúmenes NFS: cada nodo monta la carpeta del NAS al ejecutar la tarea.
+volumes:
+  db_datos:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=192.168.20.5,rw,nfsvers=4"
+      device: ":/volume1/cluster-data/${GRUPO:-grupo-a}/db"
+  wp_datos:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=192.168.20.5,rw,nfsvers=4"
+      device: ":/volume1/cluster-data/${GRUPO:-grupo-a}/wp"

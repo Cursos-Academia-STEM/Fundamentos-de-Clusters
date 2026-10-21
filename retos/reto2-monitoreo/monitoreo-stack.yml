@@ -1,0 +1,37 @@
+# Reto 2 — Servicio global: una réplica por nodo que reporta CPU, memoria y temperatura.
+# Cada réplica escribe una línea cada 10 s en la carpeta del NAS del grupo.
+#
+#   mkdir -p /mnt/cluster-data/grupo-a/monitoreo
+#   GRUPO=grupo-a docker stack deploy -c monitoreo-stack.yml monitoreo
+#   bash ver_monitoreo.sh a
+services:
+  agente:
+    image: alpine:3.20
+    hostname: "{{.Node.Hostname}}"   # el contenedor toma el nombre del nodo donde corre
+    command:
+      - sh
+      - -c
+      - |
+        while true; do
+          temp=$$(awk '{printf "%.1f", $$1/1000}' /sys/class/thermal/thermal_zone0/temp)
+          carga=$$(cut -d' ' -f1 /proc/loadavg)
+          mem=$$(awk '/MemTotal/ {t=$$2} /MemAvailable/ {a=$$2} END {printf "%.0f", 100*(t-a)/t}' /proc/meminfo)
+          echo "$$(date +%T) $$(hostname) temp=$${temp}C carga=$${carga} mem=$${mem}%" > /datos/$$(hostname).txt
+          sleep 10
+        done
+    volumes:
+      - monitoreo:/datos
+    deploy:
+      mode: global                   # exactamente una tarea en cada nodo del swarm
+      resources:
+        limits:
+          cpus: "0.10"
+          memory: 32M
+
+volumes:
+  monitoreo:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=192.168.20.5,rw,nfsvers=4"
+      device: ":/volume1/cluster-data/${GRUPO:-grupo-a}/monitoreo"

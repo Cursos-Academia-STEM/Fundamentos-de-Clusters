@@ -1,0 +1,54 @@
+# Ejemplo WordPress listo para la guía (Práctica 5, en un solo nodo).
+#
+#   docker compose up -d                                   # sitio vacío, instalación manual
+#   WP_URL=http://192.168.20.11:8080 docker compose run --rm wpcli   # instala y publica el ejemplo
+#
+# Contraseñas solo para el laboratorio.
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: raiz123
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: wp
+      MARIADB_PASSWORD: wp123
+    volumes:
+      - datos_db:/var/lib/mysql
+
+  web:
+    image: wordpress:latest
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "8080:80"
+    environment: &wp_db
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: wp123
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - datos_wp:/var/www/html        # archivos de WordPress, compartidos con wpcli
+
+  # Herramienta de una sola ejecución: no arranca con "up", solo con "compose run".
+  wpcli:
+    image: wordpress:cli
+    profiles: ["ejemplo"]
+    user: "33:33"                     # www-data, mismo dueño que los archivos de web
+    depends_on:
+      - web
+    environment:
+      <<: *wp_db
+      WP_URL: ${WP_URL:-http://localhost:8080}
+      WP_TITULO: ${WP_TITULO:-Cluster Raspberry Pi}
+      WP_ADMIN: ${WP_ADMIN:-admin}
+      WP_CLAVE: ${WP_CLAVE:-cluster2026}
+    volumes:
+      - datos_wp:/var/www/html
+      - ./contenido.sh:/contenido.sh:ro
+    entrypoint: ["sh", "/contenido.sh"]
+
+volumes:
+  datos_db:
+  datos_wp:

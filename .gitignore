@@ -1,0 +1,5 @@
+# Resultados generados por los scripts
+practica-01-cluster-humano/hojas/
+bitacora_falla_*.txt
+resultados_pruebas_*.csv
+__pycache__/

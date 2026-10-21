@@ -1,0 +1,10 @@
+# Bloque para agregar al final de /etc/hosts en cada nodo (sección 2.4.5)
+192.168.20.5   nas
+192.168.20.10  pi-a-master
+192.168.20.11  pi-a-01
+192.168.20.12  pi-a-02
+192.168.20.13  pi-a-03
+192.168.20.20  pi-b-master
+192.168.20.21  pi-b-01
+192.168.20.22  pi-b-02
+192.168.20.23  pi-b-03
